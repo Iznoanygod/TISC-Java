@@ -60,6 +60,9 @@ public class TISC {
 		}
 		HT.put("ACC", 0);
 		HT.put("BAK", 0);
+		for(int i = 0; i < 16; i++) {
+			HT.put("REG" + i, 0);
+		}
 		while (true) {
 			try {
 				String opcode = prog[pointer].split("\\s")[0];
@@ -69,8 +72,7 @@ public class TISC {
 							.split("\\s+");
 				parse(opcode, arguments);
 			} catch (ArrayIndexOutOfBoundsException e) {
-				System.out.println(
-						"tisc: improper program halt at line " + pointer + ": program requires a halt instruction");
+				System.out.println("tisc: improper program halt at line " + pointer + ": program requires a halt instruction");
 				System.exit(0);
 			}
 		}
