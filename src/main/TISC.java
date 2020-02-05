@@ -10,8 +10,8 @@ public class TISC {
 	public static String[] prog;
 	public static int pointer;
 	public static void main(String[] args) {
-		if(args.length < 1) {
-			System.out.println("usage: tisc input_file [arg...]");
+		if(args.length != 1) {
+			System.out.println("usage: tisc input_file");
 			System.exit(0);
 		}
 		File file = new File(args[0]);
@@ -22,7 +22,7 @@ public class TISC {
 			prog = read.next().split("\n");
 			read.close();
 		} catch (FileNotFoundException e) {
-			System.out.println("tisc: can't open file \'" + args[0] + "\': No such file or directory");
+			System.out.println("tisc: can't open file '" + args[0] + "': No such file");
 			System.exit(0);
 		}
 		for(int i = 0; i < prog.length; i++) {
@@ -33,6 +33,10 @@ public class TISC {
 				String[] splits = prog[i].replaceAll("\\s","").split(":");
 				if(splits.length != 1) {
 					System.out.println("tisc: invalid label at line " + pointer + ": label can not have instruction following label declaration");
+					System.exit(0);
+				}
+				if(splits[0].length() > 16) {
+					System.out.println("tisc: invalid label at line " + pointer + ": label name can not be longer than 16 characters");
 					System.exit(0);
 				}
 				if(splits[0].matches("[A-Z]+")) {
@@ -49,17 +53,25 @@ public class TISC {
 				}
 			}
 		}
+		HT.put("ACC", 0);
+		HT.put("BAK", 0);
 		while(true) {
-			String opcode = prog[pointer].split("\\s")[0];
-			String[] arguments = {};
-			if(opcode.length() != prog[pointer].trim().length())
-				arguments = prog[pointer].substring(opcode.length() + 1, prog[pointer].length()).trim().split("\\s+");
-			parse(opcode, arguments);
+			try {
+				String opcode = prog[pointer].split("\\s")[0];
+				String[] arguments = {};
+				if(opcode.length() != prog[pointer].trim().length())
+					arguments = prog[pointer].substring(opcode.length() + 1, prog[pointer].length()).trim().split("\\s+");
+				parse(opcode, arguments);
+			}
+			catch(ArrayIndexOutOfBoundsException e) {
+				System.out.println("tisc: improper program halt at line " + pointer + ": program requires a halt instruction");
+				System.exit(0);
+			}
 		}
 		
 	}
 	public static void parse(String line, String[] args) {
-		if(line.charAt(0) == '#') {
+		if(line.length() == 0 || line.charAt(0) == '#' ) {
 			pointer++;
 			return;
 		}
@@ -70,7 +82,7 @@ public class TISC {
 		switch(line) {
 		case "SAV":
 			if(args.length != 0) {
-				System.out.println("tisc: invalid argument count at line " + pointer + ": instruction takes 0 argument but " + args.length + "were given");
+				System.out.println("tisc: invalid argument count at line " + pointer + ": instruction takes 0 arguments");
 				System.exit(0);
 			}
 			int acc = HT.get("ACC");
@@ -79,7 +91,7 @@ public class TISC {
 			break;
 		case "NEG":
 			if(args.length != 1) {
-				System.out.println("tisc: invalid argument count at line " + pointer + ": instruction takes 0 argument but " + args.length + "were given");
+				System.out.println("tisc: invalid argument count at line " + pointer + ": instruction takes 0 arguments");
 				System.exit(0);
 			}
 			acc = HT.get("ACC");
@@ -88,7 +100,7 @@ public class TISC {
 			break;
 		case "SWP":
 			if(args.length != 0) {
-				System.out.println("tisc: invalid argument count at line " + pointer + ": instruction takes 0 argument but " + args.length + "were given");
+				System.out.println("tisc: invalid argument count at line " + pointer + ": instruction takes 0 arguments");
 				System.exit(0);
 			}
 			int a = HT.get("ACC");
@@ -98,23 +110,23 @@ public class TISC {
 			break;
 		case "JRO":
 			if(args.length != 1) {
-				System.out.println("tisc: invalid argument count at line " + pointer + ": instruction takes 1 argument but " + args.length + "were given");
+				System.out.println("tisc: invalid argument count at line " + pointer + ": instruction takes 1 argument");
 				System.exit(0);
 			}
 			if(args[0].matches("-?(0|[1-9]\\d*)")) {
 				pointer += Integer.parseInt(args[0]);
 			}
-			else if(validRegister(args[0])) {
+			else if(validOpcode(args[0])) {
 				pointer += HT.get(args[0]);
 			}
 			else {
-				System.out.println("tisc: invalid register at line " + pointer + ": /'" + args[0] + "\' not a valid register");
+				System.out.println("tisc: invalid register at line " + pointer + ": '" + args[0] + "' not a valid register");
 				System.exit(0);
 			}
 			break;
 		case "JMP":
 			if(args.length != 1) {
-				System.out.println("tisc: invalid argument count at line " + pointer + ": instruction takes 1 argument but " + args.length + "were given");
+				System.out.println("tisc: invalid argument count at line " + pointer + ": instruction takes 1 argument");
 				System.exit(0);
 			}
 			if(JT.containsKey(args[0])) {
@@ -127,7 +139,7 @@ public class TISC {
 			break;
 		case "JEZ":
 			if(args.length != 1) {
-				System.out.println("tisc: invalid argument count at line " + pointer + ": instruction takes 1 argument but " + args.length + "were given");
+				System.out.println("tisc: invalid argument count at line " + pointer + ": instruction takes 1 argument");
 				System.exit(0);
 			}
 			if(JT.containsKey(args[0])) {
@@ -143,7 +155,7 @@ public class TISC {
 			break;
 		case "JNZ":
 			if(args.length != 1) {
-				System.out.println("tisc: invalid argument count at line " + pointer + ": instruction takes 1 argument but " + args.length + "were given");
+				System.out.println("tisc: invalid argument count at line " + pointer + ": instruction takes 1 argument");
 				System.exit(0);
 			}
 			if(JT.containsKey(args[0])) {
@@ -159,7 +171,7 @@ public class TISC {
 			break;
 		case "JGZ":
 			if(args.length != 1) {
-				System.out.println("tisc: invalid argument count at line " + pointer + ": instruction takes 1 argument but " + args.length + "were given");
+				System.out.println("tisc: invalid argument count at line " + pointer + ": instruction takes 1 argument");
 				System.exit(0);
 			}
 			if(JT.containsKey(args[0])) {
@@ -175,7 +187,7 @@ public class TISC {
 			break;
 		case "JLZ":
 			if(args.length != 1) {
-				System.out.println("tisc: invalid argument count at line " + pointer + ": instruction takes 1 argument but " + args.length + "were given");
+				System.out.println("tisc: invalid argument count at line " + pointer + ": instruction takes 1 argument");
 				System.exit(0);
 			}
 			if(JT.containsKey(args[0])) {
@@ -191,7 +203,7 @@ public class TISC {
 			break;
 		case "MOV":
 			if(args.length != 2) {
-				System.out.println("tisc: invalid argument count at line " + pointer  + ": instruction takes 2 argument but " + args.length + "were given");
+				System.out.println("tisc: invalid argument count at line " + pointer  + ": instruction takes 2 arguments");
 				System.exit(0);
 			}
 			int movable;
@@ -199,8 +211,8 @@ public class TISC {
 				movable = Integer.parseInt(args[0]);
 			}
 			else {
-				if(!validRegister(args[0])) {
-					System.out.println("tisc: invalid register at line " + pointer + ": /'" + args[0] + "\' not a valid register");
+				if(!validOpcode(args[0])) {
+					System.out.println("tisc: invalid register at line " + pointer + ": '" + args[0] + "' not a valid register");
 					System.exit(0);
 				}
 				movable = HT.get(args[0]);
@@ -211,73 +223,73 @@ public class TISC {
 			else if(args[1].equals("OPI")) {
 				System.out.print((int)movable);
 			}
-			else if(validRegister(args[1])) {
+			else if(validOpcode(args[1])) {
 				HT.put(args[1], movable);
 			}
 			else {
-				System.out.println("tisc: invalid register at line " + pointer + ": /'" + args[1] + "\' not a valid register");
+				System.out.println("tisc: invalid register at line " + pointer + ": '" + args[1] + "' not a valid register");
 				System.exit(0);
 			}
 			pointer++;
 			break;
 		case "ADD":
 			if(args.length != 1) {
-				System.out.println("tisc: invalid argument count at line " + pointer + ": instruction takes 1 argument but " + args.length + "were given");
+				System.out.println("tisc: invalid argument count at line " + pointer + ": instruction takes 1 argument");
 				System.exit(0);
 			}
 			if(args[0].matches("-?(0|[1-9]\\d*)")) {
 				int adding = HT.get("ACC");
 				HT.put("ACC", adding + Integer.parseInt(args[0]));
 			}
-			else if(validRegister(args[0])) {
+			else if(validOpcode(args[0])) {
 				int adding = HT.get("ACC");
 				HT.put("ACC", adding + HT.get(args[0]));
 			}
 			else {
-				System.out.println("tisc: invalid register at line " + pointer + ": /'" + args[0] + "\' not a valid register");
+				System.out.println("tisc: invalid register at line " + pointer + ": '" + args[0] + "' not a valid register");
 				System.exit(0);
 			}
 			pointer++;
 			break;
 		case "SUB":
 			if(args.length != 1) {
-				System.out.println("tisc: invalid argument count at line " + pointer + ": instruction takes 1 argument but " + args.length + "were given");
+				System.out.println("tisc: invalid argument count at line " + pointer + ": instruction takes 1 argument");
 				System.exit(0);
 			}
 			if(args[0].matches("-?(0|[1-9]\\d*)")) {
 				int adding = HT.get("ACC");
 				HT.put("ACC", adding - Integer.parseInt(args[0]));
 			}
-			else if(validRegister(args[0])) {
+			else if(validOpcode(args[0])) {
 				int adding = HT.get("ACC");
 				HT.put("ACC", adding - HT.get(args[0]));
 			}
 			else {
-				System.out.println("tisc: invalid register at line " + pointer + ": /'" + args[0] + "\' not a valid register");
+				System.out.println("tisc: invalid register at line " + pointer + ": '" + args[0] + "' not a valid register");
 				System.exit(0);
 			}
 			pointer++;
 			break;
 		case "NOP":
 			if(args.length != 0) {
-				System.out.println("tisc: invalid argument count at line " + pointer + ": instruction takes 0 argument but " + args.length + "were given");
+				System.out.println("tisc: invalid argument count at line " + pointer + ": instruction takes 0 arguments");
 				System.exit(0);
 			}
 			pointer++;
 			break;
 		case "HALT":
 			if(args.length != 0) {
-				System.out.println("tisc: invalid argument count at line " + pointer + ": instruction takes 0 argument but " + args.length + "were given");
+				System.out.println("tisc: invalid argument count at line " + pointer + ": instruction takes 0 arguments");
 				System.exit(0);
 			}
 			System.exit(0);
 		default:
-			System.out.println("tisc: invalid instruction at line " + pointer + ": /'" + line + "\' not a valid instruction");
-			break;
+			System.out.println("tisc: invalid instruction at line " + pointer + ": '" + line + "' not a valid instruction");
+			System.exit(0);
 		}
 
 	}
-	public static boolean validRegister(String arg) {
+	public static boolean validOpcode(String arg) {
 		if(arg.equals("ACC") || arg.equals("SAV")) {
 			return true;
 		}
